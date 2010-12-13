@@ -30,7 +30,7 @@ use Devel::Dwarn;
   }
 
   sub _build_ssh_env_vars {
-    return {};
+    return '';
     # this needs work I think. First off, it won't work.
     # +{ $_[0]->_firsthop_perlssh->eval(; 'chomp(my @env = `ssh-agent`); my %new_env; foreach (@env) { /^(.*?)=(.*)/; $ENV{$1} =$new_env{$1}=$2; } return %new_env;' ); }
   }
@@ -39,10 +39,10 @@ use Devel::Dwarn;
     my( $self, @hosts ) = @_;
     my $ssh = $self->_ssh;
 
-    my %vars = %{ $self->_ssh_env_vars };
-    my $env_str = ''; $env_str .= "$_='$vars{$_}' " foreach ( keys %vars );
-    my $command = join ' ', $env_str, (map "ssh -o StrictHostKeyChecking=no -A $_", @hosts), "perl";
-    my( $read, $write ) = $ssh->open2("sh -c $env_str $command");
+    my $env_str = $self->_ssh_env_vars;
+    my $command = join ' ', (map "ssh -o StrictHostKeyChecking=no -A $_", @hosts), "perl";
+    $command = "sh -c '$env_str$command'"; 
+    my( $read, $write ) = $ssh->open2($command);
 
     my $readfunc = sub { sysread( $read, $_[0], $_[1] ) };
     my $writefunc = sub { syswrite( $write, $_[0] ) };
@@ -76,9 +76,9 @@ $perlssh->eval( "use File::HomeDir" );
 my $homedir2 = $perlssh->eval( 'File::HomeDir->my_home' );
 is( $homedir2, "/home/test", 'got $ENV{HOME} the smart way' );
 
-my $new_env = $perlssh->eval( 'chomp(my @env = `ssh-agent`); my %new_env; foreach (@env) { /^(.*?)=(.*)/; $ENV{$1} =$new_env{$1}=$2; } my $output; $output .= "$_=$new_env{$_}" foreach ( keys %new_env ); $output;' );
-Dwarn %{ $new_env };
-$perlssh->_ssh_env_vars( %{ $new_env } );
+my $new_env = $perlssh->eval( 'chomp(my @env = `ssh-agent`); my %new_env; foreach (@env) { /^(.*?)=([^;]+)/ or next; $ENV{$1} =$new_env{$1}=$2; } my $output; $output .= "$_=$new_env{$_} " foreach ( keys %new_env ); $output;' );
+Dwarn $new_env;
+$pipc->{ssh_env_vars} = $new_env; 
 
 my @test_hosts = ( 'stagetwo@localhost', 'stagethree@localhost' );
 my ($cmd2, $pssh2) = $pipc->_open_perlssh(@test_hosts);
