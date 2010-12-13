@@ -26,7 +26,11 @@ use Devel::Dwarn;
   }
 
   sub _ssh_env_vars {
-    $_[0]->{ssh_env_vars} ||= $_[0]->_build_ssh_env_vars;
+    if( defined $_[1] ) {
+      $_[0]->{ssh_env_vars} = $_[1];
+    } else {
+      $_[0]->{ssh_env_vars} ||= $_[0]->_build_ssh_env_vars;
+    }
   }
 
   sub _build_ssh_env_vars {
