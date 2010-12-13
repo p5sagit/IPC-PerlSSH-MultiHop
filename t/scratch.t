@@ -26,7 +26,7 @@ use Test::More;
   sub _open_perlssh {
     my( $self, @hosts ) = @_;
     my $ssh = $self->_ssh;
-    my $command = join ' ', (map "ssh -A $_", @hosts), "perl";
+    my $command = join ' ', (map "ssh -o StrictHostKeyChecking=no -A $_", @hosts), "perl";
     my( $read, $write ) = $ssh->open2($command);
 
     my $readfunc = sub { sysread( $read, $_[0], $_[1] ) };
@@ -61,12 +61,7 @@ $perlssh->eval( "use File::HomeDir" );
 my $homedir2 = $perlssh->eval( 'File::HomeDir->my_home' );
 is( $homedir2, "/home/test", 'got $ENV{HOME} the smart way' );
 
-$perlssh->eval( 'chomp(my @env = `ssh-agent`); foreach (@env) { /^(.*?)=(.*)/; $ENV{$1} = $2; }' );
-my $test_ssh_add = $perlssh->eval( 'system("ssh-add")' );
-
-my $test_ssh_env = $perlssh->eval( '$ENV{SSH_AUTH_SOCK}' );
-ok( defined $test_ssh_env, "SSH_AUTH_SOCK = $test_ssh_env" );
-ok( defined $test_ssh_add, "ssh-add returned $test_ssh_add" );
+my $local_env = $perlssh->eval( 'chomp(my @env = `ssh-agent`); my %new_env; foreach (@env) { /^(.*?)=(.*)/; $ENV{$1} =$new_env{$1}=$2; } return \%new_env;' );
 
 my @test_hosts = ( 'stagetwo@localhost', 'stagethree@localhost' );
 my ($cmd2, $pssh2) = $pipc->_open_perlssh(@test_hosts);
