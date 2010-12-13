@@ -61,7 +61,13 @@ $perlssh->eval( "use File::HomeDir" );
 my $homedir2 = $perlssh->eval( 'File::HomeDir->my_home' );
 is( $homedir2, "/home/test", 'got $ENV{HOME} the smart way' );
 
-my @test_hosts = [ 'stagetwo@localhost', 'stagethree@localhost' ];
+$perlssh->eval( 'chomp(my @env = `ssh-agent`); foreach (@env) { /^(.*?)=(.*)/; $ENV{$1} = $2; }' );
+$perlssh->eval( 'system("ssh-add")' );
+
+my $test_ssh_env = $perlssh->eval( '$ENV{SSH_AUTH_SOCK}' );
+ok( defined $test_ssh_env, "SSH_AUTH_SOCK = $test_ssh_env" );
+
+my @test_hosts = ( 'stagetwo@localhost', 'stagethree@localhost' );
 my ($cmd2, $pssh2) = $pipc->_open_perlssh(@test_hosts);
 is( ref $pssh2, "IPC::PerlSSH", "\$pssh2 isa IPC::PerlSSH (via $cmd2)" );
 
