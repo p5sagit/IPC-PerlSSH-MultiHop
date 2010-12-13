@@ -32,7 +32,7 @@ use Test::More;
     my $readfunc = sub { sysread( $read, $_[0], $_[1] ) };
     my $writefunc = sub { syswrite( $write, $_[0] ) };
     
-    IPC::PerlSSH->new( Readfunc => $readfunc, Writefunc => $writefunc );
+    ($command, IPC::PerlSSH->new( Readfunc => $readfunc, Writefunc => $writefunc ));
   }
 
 
@@ -43,9 +43,9 @@ $ssh->login('test', 'test');
 
 my $pipc = Net::SSH::Perl::ProxiedIPC->new(ssh => $ssh);
 
-my $perlssh = $pipc->_open_perlssh;
+my ($cmd, $perlssh) = $pipc->_open_perlssh;
 
-is( ref $perlssh, "IPC::PerlSSH", '$perlssh isa IPC::PerlSSH' );
+is( ref $perlssh, "IPC::PerlSSH", "\$perlssh isa IPC::PerlSSH (via $cmd)" );
 
 $perlssh->eval( "use POSIX qw(uname)" );
 my @remote_uname = $perlssh->eval( "uname()" );
@@ -60,5 +60,13 @@ fail( "we require a little sensibility in our \$ENV thank you." )
 $perlssh->eval( "use File::HomeDir" );
 my $homedir2 = $perlssh->eval( 'File::HomeDir->my_home' );
 is( $homedir2, "/home/test", 'got $ENV{HOME} the smart way' );
+
+my @test_hosts = [ 'stagetwo@localhost', 'stagethree@localhost' ];
+my ($cmd2, $pssh2) = $pipc->_open_perlssh(@test_hosts);
+is( ref $pssh2, "IPC::PerlSSH", "\$pssh2 isa IPC::PerlSSH (via $cmd2)" );
+
+$pssh2->eval( "use POSIX qw(uname)" );
+@remote_uname = $pssh2->eval( "uname()" );
+is( $remote_uname[1], "minerva", 'uname() returns minerva three jumps into localhost!' );
 
 done_testing;
