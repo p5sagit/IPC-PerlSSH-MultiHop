@@ -52,4 +52,13 @@ my @remote_uname = $perlssh->eval( "uname()" );
 
 ## This is a really shitty idea for a test but fuck you.
 is( $remote_uname[1], "minerva", 'localhost uname() returns minerva' );
+
+my $homedir = $perlssh->eval( '$ENV{HOME}' );
+fail( "we require a little sensibility in our \$ENV thank you." )
+  unless defined $homedir;
+
+$perlssh->eval( "use File::HomeDir" );
+my $homedir2 = $perlssh->eval( 'File::HomeDir->my_home' );
+is( $homedir2, "/home/test", 'got $ENV{HOME} the smart way' );
+
 done_testing;
